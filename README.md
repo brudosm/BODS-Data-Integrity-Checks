@@ -32,10 +32,44 @@ Every batch data integration (ETL) job should employ measures to ensure data int
 ## Usage
 The relative difference between source and target is calculated as follows: `abs(source_value - target_value) / source_value`
 
-*The basic Data Services batch job flow would be:*
+**The basic Data Services batch job flow would be:**
 1. In the initialize script, capture current date/time in a global variable.
 2. In the initialize script, capture required source counts and/or other values. For each: Execute a Data Services function that inserts a record into the above table. 
 3. Do the movement/transformation of data from source to target.
 4. In the finalize script, capture the required target counts and/or values. For each, Execute a Data Services function that updates the record from step 2 above with the target value and error/warning tolerance threshold values. The error threshold will be checked first; violation of error threshold will cause the script to raise an exception.
 
 Violation of warning threshold will cause a warning message to be printed. A function return code of "2" will indicate a warning and the developer can take additional steps if they chose (ex: email someone).
+
+**Example initialize script**
+
+```
+# $GV_LoadDateTime is the job execution date/time
+# 'sales_budget_revenue' is the data point label specific to this job
+# 2.1 is the source value - this would typically be in the form of a variable containing
+# a record count or aggregate value. This cannot be null or zero.
+
+$GV_LoadDateTime = sysdate( );
+CF_Data_Integrity_Insert($GV_LoadDateTime, 'sales_budget_revenue', 2.1);
+```
+
+**Example finalize script**
+
+```
+# This function returns 1 if everything is fine and 2 if the warning threshold was breached.
+# 2 is the target value - this would typically be in the form of a variable and cannot be null
+# .05 is the error tolerance threshold. Enter a value between 0 and 1 or -1 to ignore
+# -1 is the warning tolerance threshold. Enter a value between 0 and 1 or -2 to ignore
+
+if (CF_Data_Integrity_Update($GV_LoadDateTime, 'sales_budget_revenue', 2, .05, -1) = 2)
+begin
+  print('Data integrity warning threshold breached - consider emailing someone.');	
+end
+```
+
+**Example Data**
+
+|Job data integrity id | Job name | Job execution date | Data point label | Source value | Target value | Error tolerance threshold | Warning tolerance thershold |
+|---|---|---|---|---|---|---|---|
+| 1 | JOB_Strategic_AP_Demand | 11/3/2014 10:57:01 AM | Demand_lbs_total | 1118123456.123 | 1118123990.123 | .01 | .005 | 
+| 2 | JOB_Strategic_AP_Demand | 11/3/2014 10:57:01 AM | Budget_total | 618123456.123 | 618123456.123 | .01 | .005 |
+| 3 | JOB_Budget_Load | 11/3/2014 11:03:00 AM | Record_count | 550 | 550 | 0 | -1 |
