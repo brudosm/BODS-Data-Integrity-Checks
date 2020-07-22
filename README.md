@@ -7,7 +7,8 @@ Every batch data integration (ETL) job should employ measures to ensure data int
 ## Requirements
 - This method is tested with SAP Data Services 4.2. It should work with earlier versions, but has not been tested.
 - A database where you can create a table that will hold a history of the data integrity checks.
--- I recommend having an ETL support database that resides on the same server as your repositories. There are a number of instances where it's handy to be able to persist data related to the operation of Data Services. In my example, the name of the DB is etl_support.
+  - I recommend having an ETL support database that resides on the same server as your repositories. There are a number of instances where it's handy to be able to persist data related to the operation of Data Services. In my example, the name of the DB is etl_support.
+  - In the functions below we assume this Datastore is named ETL_Support_DS.
 - A solid understanding of your source and target systems and how you will know that 
 
 ## Setup
@@ -24,6 +25,6 @@ Every batch data integration (ETL) job should employ measures to ensure data int
 | error_tolerance_threshold | Null | Decimal(10,9) | Optional, -1 indicates disregard |
 | warning_tolerance_threshold | Null | Decimal(10,9) | Optional, -1 indicates disregard |
 
-2. Create custom function in Data Services. 
+2. Create custom functions in Data Services. 
 - CF_Data_Integrity_Insert
 - CF_Data_Integrity_Update
