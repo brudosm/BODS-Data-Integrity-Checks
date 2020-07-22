@@ -1,0 +1,25 @@
+# See https://github.com/brudosm/BODS-Data-Integrity-Checks/ for more information.
+# 
+# 20141119  Mark. Brudos  Initial creation
+# 
+# Input parameters:
+# $job_execution_date: required, includes time and allows us to uniquely identify a run of a job
+# $data_point_label: required, label for a specific measure
+# $value: required, source value
+# 
+
+# Check input parameters
+if ($job_execution_date is null)
+  raise_exception( 'Invalid input parameter, $job_execution_date: ' || $job_execution_date );
+
+if ($data_point_label is null)
+  raise_exception( 'Invalid input parameter, $data_point_label: ' || $data_point_label );
+
+if ($value is null or $value = 0)
+  raise_exception( 'Invalid input parameter, $value: ' || $value );
+
+sql('ETL_Support_DS','insert into dbo.job_data_integrity (job_name, job_execution_date, data_point_label, source_value) values ({job_name()}, convert(Datetime,{$job_execution_date}, 120), {$data_point_label}, [$value])');
+
+#print('CF_Data_Integrity_Insert: ' || cast($job_execution_date, 'varchar(19)') || ' ' || $data_point_label || ': ' || cast($value, 'varchar(29)'));
+
+return(1);
