@@ -8,7 +8,7 @@
 # $value: required, source value
 # 
 
-# Check input parameters
+# Check input parameters.
 if ($job_execution_date is null)
   raise_exception( 'Invalid input parameter, $job_execution_date: ' || $job_execution_date );
 
@@ -18,6 +18,7 @@ if ($data_point_label is null)
 if ($value is null or $value = 0)
   raise_exception( 'Invalid input parameter, $value: ' || $value );
 
+# Insert initial data into the support table.
 sql('ETL_Support_DS','insert into dbo.job_data_integrity (job_name, job_execution_date, data_point_label, source_value) values ({job_name()}, convert(Datetime,{$job_execution_date}, 120), {$data_point_label}, [$value])');
 
 #print('CF_Data_Integrity_Insert: ' || cast($job_execution_date, 'varchar(19)') || ' ' || $data_point_label || ': ' || cast($value, 'varchar(29)'));
