@@ -1,0 +1,66 @@
+# 
+# See https://github.com/brudosm/BODS-Data-Integrity-Checks/ for more info.
+# 
+# 20141119  M. Brudos  Initial creation
+# 
+# Input parameters:
+# $job_execution_date: required, includes time and allows us to uniquely identify a run of a job
+# $data_point_label: required, label for a specific measure
+# $value: required, target value
+# $error_tolerance_threshold: required, pass a value or -1 to not set the error tolerance threshold
+# $warning_tolerance_threshold: required, pass a value or -1 to not set the warning tolerance threshold
+# 
+
+# Check input parameters
+if ($job_execution_date is null)
+  raise_exception( 'ERROR: Invalid input parameter, $job_execution_date: ' || $job_execution_date );
+
+if ($data_point_label is null)
+  raise_exception( 'ERROR: Invalid input parameter, $data_point_label: ' || $data_point_label );
+
+if ($value is null)
+  raise_exception( 'ERROR: Invalid input parameter, $value: ' || $value );
+
+if ($error_tolerance_threshold != -1 and $error_tolerance_threshold < 0)
+  raise_exception( 'ERROR: Invalid input parameter, $error_tolerance_threshold: ' || $error_tolerance_threshold );
+
+if ($warning_tolerance_threshold != -1 and $warning_tolerance_threshold < 0)
+  raise_exception( 'ERROR: Invalid input parameter, $warning_tolerance_threshold: ' || $warning_tolerance_threshold );
+
+# Verify that we are working with a single record
+$LV_Record_Count = sql('ETL_Support_DS','select count(1) from dbo.job_data_integrity where job_name = {job_name()} and job_execution_date = convert(Datetime,{$job_execution_date}, 120) and data_point_label = {$data_point_label}');
+if ($LV_Record_Count != 1)
+begin
+  raise_exception( 'ERROR: Problem with use of the Data Integrity update function.');
+end
+
+# Capture the table ID for select/update:
+$LV_job_data_integrity_id = sql('ETL_Support_DS','select job_data_integrity_id from dbo.job_data_integrity where job_name = {job_name()} and job_execution_date = convert(Datetime,{$job_execution_date}, 120) and data_point_label = {$data_point_label}');
+
+# Update with target value and error/warning threshold values
+sql('ETL_Support_DS','update dbo.job_data_integrity set target_value = [$value], error_tolerance_threshold = [$error_tolerance_threshold], warning_tolerance_threshold = [$warning_tolerance_threshold] where job_data_integrity_id = [$lv_job_data_integrity_id]');
+
+#print('CF_Data_Integrity_Update: ' || cast($job_execution_date, 'varchar(19)') || ' ' || $data_point_label || ': ' || cast($value, 'varchar(29)') || ' error tolerance: ' || cast($error_tolerance_threshold,'varchar(11)') || ' warning tolerance: ' || cast($warning_tolerance_threshold,'varchar(11)'));
+
+# Retrieve source value:
+$LV_source_value = sql('ETL_Support_DS','select source_value from dbo.job_data_integrity where job_data_integrity_id = [$lv_job_data_integrity_id]');
+
+$LV_relative_difference = abs($lv_source_value - $value)/$lv_source_value;
+
+# Evaluate error tolerance first
+if (($error_tolerance_threshold <> -1) and ($LV_relative_difference > $error_tolerance_threshold))
+begin
+  print('ERROR: Data integrity error threshold breached for data point: ' || $data_point_label || ', relative difference: ' || cast($LV_relative_difference,'varchar(11)'));
+  raise_exception( 'Data integrity error threshold breached for data point: ' || $data_point_label || ', relative difference: ' || cast($LV_relative_difference,'varchar(11)'));	
+end
+
+# Evalue warning tolerance next
+# Evaluate error tolerance first
+if (($warning_tolerance_threshold <> -1) and ($LV_relative_difference > $warning_tolerance_threshold))
+begin
+  print('WARNING: Data integrity warning threshold breached for data point: ' || $data_point_label || ', relative difference: ' || cast($LV_relative_difference,'varchar(11)'));
+  return(2);
+end
+
+# Everything was A-OK:
+return(1);
